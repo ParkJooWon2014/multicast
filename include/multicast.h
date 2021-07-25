@@ -1,7 +1,8 @@
-#include "types.h"
 
 #ifndef __MC_H__
 #define __MC_H__
+
+#include "types.h"
 
 int on_disconnect(struct node* n);
 int on_multicast(struct node * node);
@@ -15,4 +16,7 @@ struct ctrl*  gen_control(struct rdma_cm_id * id ,struct rdma_conn_param * param
 struct ctrl*  rdma_client_create(struct rdma_cm_id *id, struct sockaddr *src_addr,
 		struct sockaddr *dst_addr);
 void destroy_device(struct ctrl *ctrl);
+void die(const char * reason);
+
+
 #endif

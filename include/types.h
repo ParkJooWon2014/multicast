@@ -2,6 +2,7 @@
 
 #ifndef __MC_TYPES_H__
 #define __MC_TYPES_H__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,13 +73,5 @@ struct memregion{
 	uint64_t baseaddr;
 	uint32_t key;
 };
-
-
-void die(const char *reason)
-{
-	fprintf(stderr, "%s - errno: %d\n", reason, errno);
-	exit(EXIT_FAILURE);
-}
-
 
 #endif
