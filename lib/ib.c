@@ -8,10 +8,11 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <infiniband/verbs.h>
+#include <rdma/rdma_cma.h>
 #include <pthread.h>
 
 #include "types.h"
-
+#include "multicast.h"
 
 int post_recv(struct node *node);
 int post_send(struct node *node ,void * buffer, size_t size);

@@ -1,5 +1,19 @@
 #include "types.h"
 #include "ib.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <rdma/rdma_cma.h>
+#include <infiniband/verbs.h>
+
+void die(const char *reason)
+{
+	fprintf(stderr, "%s - errno: %d\n", reason, errno);
+	exit(EXIT_FAILURE);
+}
+
 static struct ctrl *gctrl = NULL;
 
 struct ctrl *get_ctrl(void)
@@ -10,9 +24,8 @@ struct ctrl *get_ctrl(void)
 struct device * get_device(struct node *node)
 {
 	struct device *dev = NULL;
-
 	if(!node->ctrl->dev){
-
+		
 		dev = (struct device *) malloc(sizeof(*dev));
 		TEST_Z(dev);
 		dev->verbs = node->cm_id->verbs;
@@ -22,7 +35,7 @@ struct device * get_device(struct node *node)
 
 		node->ctrl->dev = dev;
 	}
-
+	printf("finished\n");
 	return node->ctrl->dev;
 }
 
@@ -89,6 +102,7 @@ struct ctrl* alloc_control()
 	TEST_Z(ctrl);
 	memset(ctrl,0,sizeof(*ctrl));
 	ctrl->nr_node = 0;
+	ctrl->dev = NULL;
 
 	return ctrl;
 }
@@ -194,10 +208,16 @@ struct ctrl*  rdma_client_create(struct rdma_cm_id *id, struct sockaddr *src_add
 {
 	struct ctrl* ctrl = alloc_control();
 	struct node* node = alloc_node(ctrl,CLIENT);
+	
+	node->cm_id = id;
+	id->context = node;
+	
+	TEST_NZ(rdma_resolve_addr(id,src_addr,dst_addr,10));
+	
 	struct device *dev = get_device(node);
+	init_node(node);
 	struct ibv_device_attr attrs = {};
 	
-	init_node(node);
 
 	if(ctrl->nr_node >=MAX_NODE)
 		return NULL;
@@ -227,7 +247,6 @@ struct ctrl*  rdma_client_create(struct rdma_cm_id *id, struct sockaddr *src_add
 		.private_data_len = 0,
 	};
 
-	TEST_NZ(rdma_resolve_addr(id,src_addr,dst_addr,10));
 	TEST_NZ(rdma_connect(id,&param));
 
 	return ctrl;
