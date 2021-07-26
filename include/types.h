@@ -25,6 +25,13 @@
 #define TEST_Z(x) do {if (!(x)) die("error :" #x "failed(return zero/null)."); }while(0)
 #define dump_stat() printf("%d thread:  %s\n",gctrl->nr_node ,__func__)
 
+#define rdma_error(msg, args...) do {\
+	fprintf(stderr, "%s : %d : ERROR : "msg, __FILE__, __LINE__, ## args);\
+}while(0);
+
+#define debug(msg, args...) do {\
+    printf("DEBUG: "msg, ## args);\
+}while(0);
 enum node_type{
 	CLIENT,
 	SERVER
