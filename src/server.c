@@ -43,12 +43,10 @@ int main(int argc, char **argv)
 		
 		ret = on_event(&event_copy);
 		
-		if(ret == GENRETED)
-			ctrl = get_ctrl();
-		else if(ret)
+		if(ret)
 			break;
-
-
+	
+		ctrl = get_ctrl();
 	}
 
 	// handle disconnects, etc.
@@ -57,32 +55,3 @@ int main(int argc, char **argv)
 	destroy_device(ctrl);
 	return 0;
 }
-/*
-//client_mode 
-int main()
-{
-	
-	struct sockaddr_in addr = {};
-	struct rdma_cm_event *event = NULL;
-	struct rdma_event_channel *ec = NULL;
-	struct rdma_cm_id *id = NULL;
-	struct ctrl * ctrl;
-	struct rdma_conn_param conn_param;
-
-	if (argc != 2) {
-		die("Need to specify a port number to listen");
-	}
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(atoi(argv[1]));
-
-	TEST_Z(ec = rdma_create_event_channel());
-	TEST_NZ(rdma_create_id(ec, &id, NULL, RDMA_PS_TCP));
-	port = ntohs(rdma_get_src_port(listener));
-	TEST_Z(ctrl = rdam_create_);
-	printf("READY  on port %d.\n", port);
-
-
-	return 0;
-}
-*/

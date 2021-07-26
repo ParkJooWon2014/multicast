@@ -17,6 +17,11 @@ struct ctrl*  rdma_client_create(struct rdma_cm_id *id, struct sockaddr *src_add
 		struct sockaddr *dst_addr);
 void destroy_device(struct ctrl *ctrl);
 void die(const char * reason);
-
-
+int process_rdma_cm_event(struct rdma_event_channel *echannel, 
+		enum rdma_cm_event_type expected_event,
+		struct rdma_cm_event **cm_event);
+struct ctrl*  rdma_client_create(struct rdma_cm_id *id, struct sockaddr *src_addr,
+		struct sockaddr *dst_addr);
+int rdam_multi_solve(struct rdma_cm_id * id , struct rdma_event_channel *ec, 
+		struct sockaddr_in *sever);
 #endif
