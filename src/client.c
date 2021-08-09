@@ -19,6 +19,7 @@
 int main(int argc, char *argv[])
 {
 	int  op;
+	int ret = 0 ;
 	struct ctrl * ctrl = NULL;
 
 	
@@ -56,13 +57,21 @@ int main(int argc, char *argv[])
         printf("multicast address must be specified with -m\n");
         exit(1);
     }
+	ret = resolve_addr(ctrl);
+	ret = rdma_create_node(ctrl);
+
+	if(ret)
+	{
+		debug("sibal\n");
+		goto dst;
+	}
 
 	if(ctrl->type){
 	
 		char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
 		while(1){
 			debug(".... sending test MSG \n");
-			mpost_send(ctrl->node,buffer,strlen(buffer));
+			post_send(ctrl->node,buffer,strlen(buffer));
 			debug("MSG : %s\n",buffer);
 		
 			if(!strncmp("QUIT",buffer,4))
@@ -74,6 +83,8 @@ int main(int argc, char *argv[])
 		while(1)
 			sleep(1);
 	}
+
+dst:
 	destory_ctrl(ctrl);
 	debug("CLIENT IS OVER\n");
 	return 0;

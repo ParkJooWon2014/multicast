@@ -11,6 +11,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+int debug_count = 0 ;
+#define DEBUG() debug("STAGE %d : %s  %d \n",debug_count++,__func__,__LINE__)
+
 void die(const char *reason)
 {
 	fprintf(stderr,"%s - errno: %d\n", reason, errno);
@@ -52,8 +55,9 @@ int process_rdma_cm_event(struct rdma_event_channel *echannel,
 	}
 	
 	debug("A new %s type event is received \n", rdma_event_str((*cm_event)->event));
+
 	
-	ret = rdma_ack_cm_event(*cm_event);
+	ret = rdma_ack_cm_event(*cm_event);	
 	
 	if (ret) {
 		rdma_error("Failed to acknowledge the CM event, errno: %d\n", -errno);
@@ -109,7 +113,7 @@ int resolve_addr(struct ctrl *ctrl)
         return ret;
     }
     ret = process_rdma_cm_event(ec, RDMA_CM_EVENT_ADDR_RESOLVED, &event);
-    if (ret)
+	if (ret)
     {
         return ret;
     }
@@ -209,7 +213,7 @@ static struct device  * alloc_device(struct ctrl *ctrl)
 		dev = (struct device*)malloc(sizeof(*dev));
 		TEST_Z(dev);
 
-		dev->verbs = ctrl->id->verbs;
+		dev->verbs = ctrl->id->verbs;	
 		TEST_Z(dev->verbs);
 		dev->pd = ibv_alloc_pd(dev->verbs);
 		TEST_Z(dev->pd);
@@ -232,14 +236,12 @@ struct node * alloc_node(struct ctrl * ctrl)
 	node->id = ctrl->id;
 	node->mc_join = false;
 	node->type = ctrl->type;
-
+	node->ctrl = ctrl;
 
 	create_cq(node);
 	create_qp(node);
 	get_node_mr(node);
-
-	node->ctrl = ctrl;
-
+	node->state = INIT;
 	ret = rdma_join_multicast(ctrl->id,&ctrl->mcast_sockaddr,NULL);
 	if(ret)
 	{
@@ -255,15 +257,15 @@ struct node * alloc_node(struct ctrl * ctrl)
 		return NULL;
 	}
 
-	node->ah = ibv_create_ah(ctrl->dev->pd,&event->param.ud.ah_attr);
+	node->ah = ibv_create_ah(ctrl->dev->pd,&event->param.ud.ah_attr);	
 	if(!node->ah)
 	{
 		rdma_error("create_ah  is failed\n");
 		return NULL;
 	}
-
-	rdma_ack_cm_event(event);
-	debug("A new %s type event is received \n", rdma_event_str((event)->event));
+	node->state = CONNECTED;
+//	rdma_ack_cm_event(event);
+//	debug("AB new %s type event is received \n", rdma_event_str((event)->event));
 
 	return node;
 }
@@ -271,11 +273,11 @@ struct node * alloc_node(struct ctrl * ctrl)
 
 int rdma_create_node(struct ctrl * ctrl)
 {
+
 	ctrl->dev = alloc_device(ctrl);
 	ctrl->node = alloc_node(ctrl);
-	
-	if(mpost_recv(ctrl->node)){
-		rdma_error("mpost_recv is rerror\n");
+	if(post_recv(ctrl->node)){
+		rdma_error("post_recv is error\n");
 		return 1;
 	}
 

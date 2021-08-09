@@ -11,11 +11,11 @@ CFLAGS += -Wall -Werror -Winline
 LDFLAGS += -L../lib
 LDFLAGS += -lpthread -libverbs -lrdmacm -l:$(LIBKRONO)
 
-TARGETS =  server client
+TARGETS =  client
 all: $(TARGETS)
 
-server : server.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+#server : server.o
+#	$(CC) -o $@ $^ $(LDFLAGS)
 
 client : client.o
 	$(CC) -o $@ $^ $(LDFLAGS)

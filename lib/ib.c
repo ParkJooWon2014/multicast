@@ -19,13 +19,12 @@ int post_send(struct node *node ,void * buffer, size_t size);
 int get_completion(struct node * n, bool type);
 
 
-static void*  __post_recv(void * _node)
+void*  __post_recv(void * _node)
 {
 	struct node *node = (struct node*)_node;
 	TEST_Z(node);
 	void * buffer = NULL;
 	int ret = 0;
-
 	while(node->state != INIT){
 
 		TEST_NZ(ibv_req_notify_cq(node->rcv_cq,0));
@@ -56,7 +55,7 @@ static void*  __post_recv(void * _node)
 	return NULL;
 }
 
-int mpost_recv(struct node *node)
+int post_recv(struct node *node)
 {
 	pthread_t recv_thread;
 	pthread_attr_t attr;
@@ -108,7 +107,7 @@ static int __post_send(struct node* node, int type , void * buffer, size_t size)
 
 }
 
-int mpost_send(struct node *node ,void * buffer, size_t size)
+int post_send(struct node *node ,void * buffer, size_t size)
 {
 	return  __post_send(node,IBV_WR_SEND,buffer,size);
 }
