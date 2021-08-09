@@ -33,7 +33,6 @@ int main(int argc, char **argv)
 	port = ntohs(rdma_get_src_port(listener));
 	printf("listening on port %d.\n", port);
 
-
 	// handle connection requests
 	while (rdma_get_cm_event(ec, &event) == 0) {
 		struct rdma_cm_event event_copy;

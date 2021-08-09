@@ -33,8 +33,8 @@
     printf("DEBUG: "msg, ## args);\
 }while(0);
 enum node_type{
+	SERVER,
 	CLIENT,
-	SERVER
 };
 
 struct device{
@@ -51,8 +51,8 @@ struct node{
 	struct ibv_cq *snd_cq;
 	struct ibv_comp_channel *rcv_cc;
 	struct ibv_comp_channel *snd_cc;
-	struct rdma_cm_id *cm_id;
-
+	struct rdma_cm_id *id;
+	struct ibv_ah * ah ;
 	//socket addr; 
 	bool mc_join;
 	bool type;
@@ -65,13 +65,27 @@ struct node{
 	struct ibv_mr * mr;
 	void * buffer;
 
+	uint64_t remote_qpn;
+	uint32_t remote_qkey;
+
 };
 
 struct ctrl{
-
-	struct node * node[MAX_NODE];
+	
+	struct rdma_event_channel *ec ;
+	struct rdma_cm_id *id;
+	struct node * node;
 	struct device * dev;
 	int nr_node ;
+
+	struct sockaddr mcast_sockaddr;
+
+	bool type;
+	char *bind_addr;
+    char *mcast_addr;
+    char *server_port;
+	//struct rdma_addrinfo *dest_addr;
+    //struct rdma_addrinfo *mcast_addr;
 
 };
 

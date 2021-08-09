@@ -10,55 +10,66 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctype.h>
+#include <stdio.h>
 
+#define msg_size 1024
+#define DEFAULT_PORT "50000"
 
 int main(int argc, char *argv[])
 {
-	//int port;
-	int ret ;
-	struct sockaddr_in server;
-	//struct sockaddr_in client;
-	struct rdma_event_channel *ec = NULL;
-	struct rdma_cm_id *id = NULL;
-	struct ctrl * ctrl;
-	//struct rdma_cm_event *cm_event = NULL;
-	struct rdma_cm_event *event = NULL;
-	if (argc != 3) {
-		die("Need to specify a port number to listen");
-	}
+	int  op;
+	struct ctrl * ctrl = NULL;
 
+	
+	TEST_Z(ctrl = alloc_ctrl());
+    ctrl->server_port = DEFAULT_PORT;
+	ctrl->type =SERVER;
+    
+	while ((op = getopt(argc, argv, "chb:m:p:")) != -1)
+    {
+        switch (op)
+        {
+        case 'c':
+            ctrl->type = CLIENT;
+            break;
+        case 'b':
+            ctrl->bind_addr = optarg;
+            break;
+        case 'm':
+            ctrl->mcast_addr = optarg;
+            break;
+        case 'p':
+            ctrl->server_port = optarg;
+            break;
+        default:
+            printf("usage: %s -m mc_address\n", argv[0]);
+            printf("\t[-c client mode]\n");
+            printf("\t[-b bind_address]\n");
+            printf("\t[-p port_number]\n");
+            exit(1);
+        }
+    }
 
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr(argv[1]);
-	server.sin_port = htons(atoi(argv[2]));
-
-	printf("%s %d \n",argv[1],atoi(argv[2]));
-
-	TEST_Z(ec = rdma_create_event_channel());
-	TEST_NZ(rdma_create_id(ec, &id, NULL, RDMA_PS_TCP));
-	 rdam_multi_solve(id , ec, &server);
-	TEST_Z(ctrl = rdma_client_create(id,NULL,(struct sockaddr*)&server));	
-	printf("Finished Connecting!\n");
-
-	while (rdma_get_cm_event(ec, &event) == 0) {
-		struct rdma_cm_event event_copy;
-
-		memcpy(&event_copy, event, sizeof(*event));
-		rdma_ack_cm_event(event);
-
-		ret = on_event(&event_copy);
-
-		if(ret == GENRETED)
-			ctrl = get_ctrl();
-		else if(ret)
+    if (ctrl->mcast_addr == NULL)
+    {
+        printf("multicast address must be specified with -m\n");
+        exit(1);
+    }
+	
+	
+	char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
+	while(1){
+		debug(".... sending test MSG \n");
+		mpost_send(ctrl->node,buffer,strlen(buffer));
+		debug("MSG : %s\n",buffer);
+		
+		if(!strncmp("QUIT",buffer,4))
 			break;
-
-
 	}
 	
-	rdma_destroy_event_channel(ec);
-	rdma_destroy_id(id);
-	destroy_device(ctrl);
+	destory_ctrl(ctrl);
+	debug("CLIENT IS OVER\n");
 	return 0;
 
 }

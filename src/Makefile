@@ -6,7 +6,7 @@ LIBKRONO = libmc.a
 CFLAGS += $(INCLUDE)
 CFLAGS += -D_POSIX_C_SOURCE -D_GNU_SOURCE
 CFLAGS += -g 
-CFLAGS += -Wall -Werror
+CFLAGS += -Wall -Werror -Winline
 
 LDFLAGS += -L../lib
 LDFLAGS += -lpthread -libverbs -lrdmacm -l:$(LIBKRONO)

@@ -18,6 +18,7 @@ int post_recv(struct node *node);
 int post_send(struct node *node ,void * buffer, size_t size);
 int get_completion(struct node * n, bool type);
 
+
 static void*  __post_recv(void * _node)
 {
 	struct node *node = (struct node*)_node;
@@ -45,9 +46,9 @@ static void*  __post_recv(void * _node)
 		ibv_get_cq_event(node->rcv_cc,&node->rcv_cq,&buffer);
 		ret = get_completion(node,RECV);
 		if(!ret){
-			printf("----recv memory----");
-			printf("%s\n",(char*)node->buffer);
-			printf("-------------------");
+			debug("----recv memory----");
+			debug("%s\n",(char*)node->buffer);
+			debug("-------------------");
 		}
 		ibv_ack_cq_events(node->rcv_cq, 1);
 	}
@@ -55,7 +56,7 @@ static void*  __post_recv(void * _node)
 	return NULL;
 }
 
-int post_recv(struct node *node)
+int mpost_recv(struct node *node)
 {
 	pthread_t recv_thread;
 	pthread_attr_t attr;
@@ -67,8 +68,7 @@ int post_recv(struct node *node)
 static int __post_send(struct node* node, int type , void * buffer, size_t size)
 {
 
-	struct ctrl * ctrl =  node->ctrl;
-	struct device * dev = ctrl->dev;
+	struct device * dev = node->ctrl->dev;
 
 	struct ibv_send_wr wr = {};
 	struct ibv_send_wr *bad_wr = NULL;
@@ -81,25 +81,34 @@ static int __post_send(struct node* node, int type , void * buffer, size_t size)
 				size,
 				IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ));
 
-	printf("MR key=%u base vaddr=%p\n", node->mr->rkey, node->mr->addr);
-
-
+	debug("MR key=%u base vaddr=%p\n", mr->rkey, mr->addr);
+	wr.wr_id = (uint64_t)buffer;
 	wr.opcode = type; // IBV_WR_SEND;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
-	wr.send_flags = IBV_SEND_SIGNALED | IBV_SEND_INLINE;
+	wr.send_flags = IBV_SEND_SIGNALED;  // IBV_SEND_INLINE; //IBV_SEND_SIGNALED | IBV_SEND_INLINE;
+	wr.wr.ud.ah = node->ah ;
+	wr.wr.ud.remote_qpn = node->remote_qpn;
+	wr.wr.ud.remote_qkey = node->remote_qkey;
 
-	sge.addr = (uint64_t) &buffer;
+
+	sge.addr = (uint64_t)buffer;
 	sge.length = size;
+	sge.lkey = mr->lkey;
+	debug("buffer pointer is %lx\n",sge.addr);
+
+	if(!node->qp)
+		debug("I don't want \n");
+	
 	TEST_NZ(ibv_post_send(node->qp, &wr, &bad_wr));
-
+	
 	get_completion(node,SEND);
-
+	
 	return ibv_dereg_mr(mr);
 
 }
 
-int post_send(struct node *node ,void * buffer, size_t size)
+int mpost_send(struct node *node ,void * buffer, size_t size)
 {
 	return  __post_send(node,IBV_WR_SEND,buffer,size);
 }
@@ -116,13 +125,13 @@ int get_completion(struct node * n, bool type)
 			ret = ibv_poll_cq(n->rcv_cq, 1, &wc);
 
 		if (ret < 0) {
-			printf("error by ibv_poll_cq (error %d)", ret);
+			debug("error by ibv_poll_cq (error %d)", ret);
 			return 1;
 		}
 	}while (ret == 0);
 
 	if (wc.status != IBV_WC_SUCCESS) {
-		printf("work completion status %s\n",
+		debug("work completion status %s\n",
 				ibv_wc_status_str(wc.status));
 		return 1;
 	}

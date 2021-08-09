@@ -17,7 +17,6 @@ void die(const char *reason)
 	exit(EXIT_FAILURE);
 }
 
-
 int process_rdma_cm_event(struct rdma_event_channel *echannel,
 		enum rdma_cm_event_type expected_event,
 		struct rdma_cm_event **cm_event)
@@ -173,7 +172,7 @@ static void get_node_mr(struct node * node)
 }
 
 
-struct ctrl * alloc_ctrl(void)
+struct ctrl * alloc_caontrol()
 {
 	debug("%s START ....\n",__func__);
 
@@ -183,16 +182,16 @@ struct ctrl * alloc_ctrl(void)
 	TEST_Z(ctrl);
 
 
-	TEST_Z(ctrl->ec = rdma_create_event_channel());
+	TEST_NZ(ctrl->ec = rdma_create_event_channel());
 	
-	TEST_NZ(rdma_create_id(ctrl->ec,&ctrl->id,NULL,RDMA_PS_UDP));
+	TEST_Z(rdma_create_id(ctrl->ec,&ctrl->id,NULL,RDMA_PS_UDP));
 	
 	ctrl->node = NULL;
 	ctrl->dev = NULL;
 	ctrl->bind_addr = NULL;
 	ctrl->mcast_addr =NULL ;
 	ctrl->server_port = NULL;
-	ctrl->type = false;
+
 	return ctrl;
 }
 
@@ -221,7 +220,7 @@ static struct device  * alloc_device(struct ctrl *ctrl)
 
 struct node * alloc_node(struct ctrl * ctrl)
 {
-
+	
 	debug("%s START ....\n",__func__);
 	
 	TEST_Z(ctrl);
@@ -231,8 +230,6 @@ struct node * alloc_node(struct ctrl * ctrl)
 	struct rdma_cm_event *event = NULL;
 	node->id = ctrl->id;
 	node->mc_join = false;
-	node->type = ctrl->type;
-
 
 	create_cq(node);
 	create_qp(node);
@@ -269,34 +266,10 @@ struct node * alloc_node(struct ctrl * ctrl)
 }
 
 
-int rdma_create_node(struct ctrl * ctrl)
+struct node *rdma_create_node(struct ctrl * ctrl)
 {
-	ctrl->dev = alloc_device(ctrl);
 	ctrl->node = alloc_node(ctrl);
-	
-	if(mpost_recv(ctrl->node)){
-		rdma_error("mpost_recv is rerror\n");
-		return 1;
-	}
-
-	return 0;
+	return ctrl->node;
 }
 
-void destory_ctrl(struct ctrl * ctrl)
-{
-	if(ctrl->node->ah)
-		ibv_destroy_ah(ctrl->node->ah);
-	if(ctrl->node->qp)
-		rdma_destroy_qp(ctrl->id);
-	if(ctrl->node->mr)
-		ibv_dereg_mr(ctrl->node->mr);
-	if(ctrl->node->rcv_cq)
-		ibv_destroy_cq(ctrl->node->rcv_cq);
-	if(ctrl->node->snd_cq)
-		ibv_destroy_cq(ctrl->node->snd_cq);
-	
-	free(ctrl->node->buffer);
-	free(ctrl->node);
 
-	rdma_destroy_id(ctrl->id);
-}
