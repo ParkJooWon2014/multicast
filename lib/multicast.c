@@ -21,7 +21,33 @@ void die(const char *reason)
 	exit(EXIT_FAILURE);
 }
 
-
+static void *cm_thread(void *arg)
+{
+    struct rdma_cm_event *event;
+    int ret;
+    struct ctrl *ctrl = (struct ctrl *)arg;
+    while (1)
+    {
+        ret = rdma_get_cm_event(ctrl->ec, &event);
+        if (ret)
+        {
+            debug("rdma_get_cm_event\n");
+            break;
+        }
+        printf("event %s, status %d\n",
+               rdma_event_str(event->event), event->status);
+        rdma_ack_cm_event(event);
+    }
+    return NULL;
+}
+static int recv_event(struct ctrl *ctrl)
+{
+	pthread_t event ; 
+	pthread_attr_t attr;
+	pthread_attr_init(&attr); 
+	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);	
+	return pthread_create(&event,&attr,cm_thread,(void*)ctrl);
+}
 int process_rdma_cm_event(struct rdma_event_channel *echannel,
 		enum rdma_cm_event_type expected_event,
 		struct rdma_cm_event **cm_event)
@@ -78,6 +104,9 @@ int resolve_addr(struct ctrl *ctrl)
     struct rdma_addrinfo hints;
 	struct rdma_cm_event *event = NULL;
     
+// JOoWon
+	struct sockaddr_in sock;
+
 	memset(&hints, 0, sizeof(hints));
     hints.ai_port_space = RDMA_PS_UDP;
     if (ctrl->bind_addr)
@@ -99,15 +128,24 @@ int resolve_addr(struct ctrl *ctrl)
     }
     if (ctrl->bind_addr)
     {
-        ret = rdma_bind_addr(id, bind_rai->ai_src_addr);
-        if (ret)
+		memcpy(&sock,bind_rai->ai_src_addr,sizeof(sock));
+		sock.sin_family = AF_INET;
+		sock.sin_port = htons(atoi(ctrl->server_port));
+        ret = rdma_bind_addr(id, (struct sockaddr*)&sock);//bind_rai->ai_src_addr);
+        
+		if (ret)
         {
             rdma_error("rdma_bind_addr\n");
             return ret;
         }
     }
+
+	memcpy(&sock,mcast_rai->ai_dst_addr,sizeof(sock));
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(atoi(ctrl->server_port));
     ret = rdma_resolve_addr(id, (bind_rai) ? bind_rai->ai_src_addr : NULL,
-                            mcast_rai->ai_dst_addr, 2000);
+                            (struct sockaddr *)&sock,//mcast_rai->ai_dst_addr, 
+							2000);
     if (ret)
     {
         rdma_error("rdma_resolve_addr\n");
@@ -119,8 +157,9 @@ int resolve_addr(struct ctrl *ctrl)
         return ret;
     }
 
-    memcpy(&ctrl->mcast_sockaddr,
-           mcast_rai->ai_dst_addr,
+    
+	memcpy(&ctrl->mcast_sockaddr,
+           &sock,//mcast_rai->ai_dst_addr,
            sizeof(struct sockaddr));
     
 	return 0;
@@ -164,20 +203,18 @@ static void get_node_mr(struct node * node)
 	debug("%s START \n ",__func__);
 	
 	TEST_Z(node);
-	//struct device * dev = node->ctrl->dev;
+	struct device * dev = node->ctrl->dev;
 
 	node->buffer = malloc(BUFFER_SIZE);
 	TEST_Z(node->buffer);
-
-	TEST_Z(node->mr = rdma_reg_msgs(node->id,node->buffer,BUFFER_SIZE)
-			//ibv_reg_mr(
-			//	dev->pd, node->buffer,BUFFER_SIZE,
-			//	IBV_ACCESS_LOCAL_WRITE ) //| IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ)
+	TEST_Z(node->mr = //  rdma_reg_msgs(node->id,node->buffer,BUFFER_SIZE)
+			ibv_reg_mr(
+				dev->pd, node->buffer,BUFFER_SIZE,
+				IBV_ACCESS_LOCAL_WRITE) // | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ)
 			);
 	debug("registered memory region of %zu bytes\n", BUFFER_SIZE);
 
 }
-
 
 struct ctrl * alloc_ctrl(void)
 {
@@ -280,7 +317,6 @@ struct node * alloc_node(struct ctrl * ctrl)
 		return NULL;
 	}
 	node->state = CONNECTED;
-	sleep(1);
 
 //	struct rdma_cm_event * no ;
 //	rdma_ack_cm_event(no);
@@ -294,12 +330,23 @@ int rdma_create_node(struct ctrl * ctrl)
 
 	ctrl->dev = alloc_device(ctrl);
 	ctrl->node = alloc_node(ctrl);
-
+	if(ctrl->type != CLIENT)
+		if(post_recv(ctrl->node))
+		{
+			debug("post_recv failed\n");
+			return 1 ;
+		}
+	if(recv_event((void*)ctrl))
+	{
+		debug("cm_thread failed\n");
+		return 1 ;
+	}
 	return 0;
 }
 
 void destory_ctrl(struct ctrl * ctrl)
 {
+	ctrl->node->state = INIT;
 	if(ctrl->node->ah)
 		ibv_destroy_ah(ctrl->node->ah);
 	if(ctrl->node->qp)

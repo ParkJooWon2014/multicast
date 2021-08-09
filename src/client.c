@@ -58,25 +58,26 @@ int main(int argc, char *argv[])
         exit(1);
     }
 	ret = resolve_addr(ctrl);
-	ret = rdma_create_node(ctrl);
-	ret = post_recv(ctrl->node);
-
-	if(ret)
-	{
-		debug("sibal %d \n",ret);
-		goto dst;
+	if(ret){
+		debug("Can't resolve addr \n");
+		exit(1);
 	}
-	printf("????\n");
+	ret = rdma_create_node(ctrl);
+	if(ret){
+		debug("rdma_creat is failed\n");
+		exit(1);
+	}
+
 	if(ctrl->type){
-	
-		char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
-		while(1){
-			debug(".... sending test MSG \n");
-			post_send(ctrl->node,buffer,strlen(buffer));
-			debug("MSG : %s\n",buffer);
-		
-			if(!strncmp("QUIT",buffer,4))
-				break;
+		char buffer[100]  = "THIS IS SSLAB COMPUTER \n";
+		int count = 0 ;
+		while(count < 100 ){
+			printf("+++++COUNT :%d+++++\n",count);
+//			debug("sending test MSG..... \n");
+			post_send(ctrl->node,buffer,100);
+//			debug("MSG : %s\n",buffer);
+			printf("\n");
+			count ++;
 		}
 	}
 
@@ -85,7 +86,6 @@ int main(int argc, char *argv[])
 			sleep(1);
 	}
 
-dst:
 	destory_ctrl(ctrl);
 	debug("CLIENT IS OVER\n");
 	return 0;

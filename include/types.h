@@ -14,8 +14,8 @@
 #define BUFFER_SIZE (1ul << 30)
 #define MAX_CTRL 10
 
-#define SEND 0
-#define RECV 1
+#define SEND 1
+#define RECV 0
 
 #define bool short
 #define true 1
