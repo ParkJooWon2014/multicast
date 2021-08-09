@@ -56,18 +56,24 @@ int main(int argc, char *argv[])
         printf("multicast address must be specified with -m\n");
         exit(1);
     }
+
+	if(ctrl->type){
 	
-	
-	char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
-	while(1){
-		debug(".... sending test MSG \n");
-		mpost_send(ctrl->node,buffer,strlen(buffer));
-		debug("MSG : %s\n",buffer);
+		char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
+		while(1){
+			debug(".... sending test MSG \n");
+			mpost_send(ctrl->node,buffer,strlen(buffer));
+			debug("MSG : %s\n",buffer);
 		
-		if(!strncmp("QUIT",buffer,4))
-			break;
+			if(!strncmp("QUIT",buffer,4))
+				break;
+		}
 	}
-	
+
+	else {
+		while(1)
+			sleep(1);
+	}
 	destory_ctrl(ctrl);
 	debug("CLIENT IS OVER\n");
 	return 0;
