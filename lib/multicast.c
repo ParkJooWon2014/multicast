@@ -6,11 +6,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <rdma/rdma_cma.h>
+#include <rdma/rdma_verbs.h>
 #include <infiniband/verbs.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <pthread.h>
 int debug_count = 0 ;
 #define DEBUG() debug("STAGE %d : %s  %d \n",debug_count++,__func__,__LINE__)
 
@@ -76,8 +77,8 @@ int resolve_addr(struct ctrl *ctrl)
     struct rdma_addrinfo *mcast_rai = NULL;
     struct rdma_addrinfo hints;
 	struct rdma_cm_event *event = NULL;
-
-    memset(&hints, 0, sizeof(hints));
+    
+	memset(&hints, 0, sizeof(hints));
     hints.ai_port_space = RDMA_PS_UDP;
     if (ctrl->bind_addr)
     {
@@ -163,14 +164,15 @@ static void get_node_mr(struct node * node)
 	debug("%s START \n ",__func__);
 	
 	TEST_Z(node);
-	struct device * dev = node->ctrl->dev;
+	//struct device * dev = node->ctrl->dev;
 
 	node->buffer = malloc(BUFFER_SIZE);
 	TEST_Z(node->buffer);
 
-	TEST_Z(node->mr = ibv_reg_mr(
-				dev->pd, node->buffer,BUFFER_SIZE,
-				IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ)
+	TEST_Z(node->mr = rdma_reg_msgs(node->id,node->buffer,BUFFER_SIZE)
+			//ibv_reg_mr(
+			//	dev->pd, node->buffer,BUFFER_SIZE,
+			//	IBV_ACCESS_LOCAL_WRITE ) //| IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ)
 			);
 	debug("registered memory region of %zu bytes\n", BUFFER_SIZE);
 
@@ -179,7 +181,7 @@ static void get_node_mr(struct node * node)
 
 struct ctrl * alloc_ctrl(void)
 {
-	debug("%s START ....\n",__func__);
+	debug("%s START\n",__func__);
 
 	struct ctrl* ctrl = NULL;
 	
@@ -226,22 +228,32 @@ static struct device  * alloc_device(struct ctrl *ctrl)
 struct node * alloc_node(struct ctrl * ctrl)
 {
 
-	debug("%s START ....\n",__func__);
+	debug("%s START\n",__func__);
 	
 	TEST_Z(ctrl);
 	
 	struct node *node = (struct node *)malloc(sizeof(*node));
 	int ret = 1 ;
 	struct rdma_cm_event *event = NULL;
+	struct ibv_port_attr port_attr ;
+
+
 	node->id = ctrl->id;
 	node->mc_join = false;
 	node->type = ctrl->type;
 	node->ctrl = ctrl;
 
+	ret = ibv_query_port(ctrl->dev->verbs,ctrl->id->port_num,&port_attr);
+	if(ret){
+		rdma_error("ibv_query_port is failed\n");
+		return NULL;
+	}
+
 	create_cq(node);
 	create_qp(node);
 	get_node_mr(node);
 	node->state = INIT;
+
 	ret = rdma_join_multicast(ctrl->id,&ctrl->mcast_sockaddr,NULL);
 	if(ret)
 	{
@@ -256,17 +268,23 @@ struct node * alloc_node(struct ctrl * ctrl)
 		rdma_error("process_rdma_cm_event is failed\n");
 		return NULL;
 	}
-
 	node->ah = ibv_create_ah(ctrl->dev->pd,&event->param.ud.ah_attr);	
+	
+    node->remote_qpn = event->param.ud.qp_num;
+    node->remote_qkey = event->param.ud.qkey;
+    debug("+++++++ CTRL : qpn %lx +++++++\n", node->remote_qpn);
+    debug("+++++++ CTRL : qkey %x +++++++ \n", node->remote_qkey);
 	if(!node->ah)
 	{
 		rdma_error("create_ah  is failed\n");
 		return NULL;
 	}
 	node->state = CONNECTED;
-//	rdma_ack_cm_event(event);
-//	debug("AB new %s type event is received \n", rdma_event_str((event)->event));
+	sleep(1);
 
+//	struct rdma_cm_event * no ;
+//	rdma_ack_cm_event(no);
+//	debug("AB new %s type event is received \n", rdma_event_str((event)->event));
 	return node;
 }
 
@@ -276,10 +294,6 @@ int rdma_create_node(struct ctrl * ctrl)
 
 	ctrl->dev = alloc_device(ctrl);
 	ctrl->node = alloc_node(ctrl);
-	if(post_recv(ctrl->node)){
-		rdma_error("post_recv is error\n");
-		return 1;
-	}
 
 	return 0;
 }

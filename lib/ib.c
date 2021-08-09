@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <infiniband/verbs.h>
+#include <rdma/rdma_verbs.h>
 #include <rdma/rdma_cma.h>
 #include <pthread.h>
 
@@ -54,12 +55,18 @@ void*  __post_recv(void * _node)
 	
 	return NULL;
 }
+void *print(void * a)
+{
+	debug("SSSSIBA:LLLLL\n");
+	return NULL;
+}
 
 int post_recv(struct node *node)
 {
 	pthread_t recv_thread;
 	pthread_attr_t attr;
-	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+	 pthread_attr_init(&attr); 
+	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);	
 	return pthread_create(&recv_thread,&attr,__post_recv,(void*)node);
 
 }
@@ -67,19 +74,19 @@ int post_recv(struct node *node)
 static int __post_send(struct node* node, int type , void * buffer, size_t size)
 {
 
-	struct device * dev = node->ctrl->dev;
+	//struct device * dev = node->ctrl->dev;
 
 	struct ibv_send_wr wr = {};
 	struct ibv_send_wr *bad_wr = NULL;
 	struct ibv_sge sge = {};
 	struct ibv_mr * mr = NULL;
 
-	TEST_Z(mr = ibv_reg_mr(
+	TEST_Z(mr = rdma_reg_msgs(node->id,buffer,size)); /*ibv_reg_mr(
 				dev->pd,
 				buffer,
 				size,
-				IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ));
-
+				IBV_ACCESS_LOCAL_WRITE)); // | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ));
+*/
 	debug("MR key=%u base vaddr=%p\n", mr->rkey, mr->addr);
 	wr.wr_id = (uint64_t)buffer;
 	wr.opcode = type; // IBV_WR_SEND;

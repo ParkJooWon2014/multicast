@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <stdio.h>
-
+#include <pthread.h>
 #define msg_size 1024
 #define DEFAULT_PORT "50000"
 
@@ -59,13 +59,14 @@ int main(int argc, char *argv[])
     }
 	ret = resolve_addr(ctrl);
 	ret = rdma_create_node(ctrl);
+	ret = post_recv(ctrl->node);
 
 	if(ret)
 	{
-		debug("sibal\n");
+		debug("sibal %d \n",ret);
 		goto dst;
 	}
-
+	printf("????\n");
 	if(ctrl->type){
 	
 		char buffer [] = "QUIT : THIS IS TEST FOR MULTICAST SSALB COMPUTER ";
