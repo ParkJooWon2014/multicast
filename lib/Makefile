@@ -10,7 +10,7 @@ CFLAGS += $(OFLAGS)
 CFLAGS += -I../include
 CFLAGS += -D_POSIX_C_SOURCE -D_GNU_SOURCE -D_ISOC99_SOURCE
 CFLAGS += -g -fPIC
-CFLAGS += -Wall -Werror
+CFLAGS += -Wall -Werror -Winline
 
 CFLAGS += -lpthread -libverbs -lrdmacm
 
