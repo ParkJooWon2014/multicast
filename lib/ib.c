@@ -48,7 +48,7 @@ void*  __post_recv(void * _node)
 		ret = get_completion(node,RECV);
 		if(!ret){
 			debug("----recv memory----\n");
-			debug("%s\n",(char*)node->buffer);
+			debug("%s\n",(char*)node->buffer + UDADDITION);
 			debug("-------------------\n");
 		}
 		ibv_ack_cq_events(node->rcv_cq, 1);
@@ -88,24 +88,25 @@ static int __post_send(struct node* node, int type , void * buffer, size_t size)
 	memset(&sge, 0, sizeof(sge));
 
 	debug("MR key=%u base vaddr=%p\n", mr->rkey, mr->addr);
-	wr.wr_id = (uint64_t)buffer;
+	wr.wr_id = (uint64_t)buffer ;
 	wr.opcode = type;		// IBV_WR_SEND;
-//   wr.opcode = IBV_WR_SEND_WITH_IMM;
+//	wr.opcode = IBV_WR_SEND_WITH_IMM;
+    wr.imm_data = htonl(node->id->qp->qp_num);
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
-	wr.send_flags = IBV_WR_SEND_WITH_IMM; //IBV_SEND_SIGNALED ; // | IBV_SEND_INLINE; //IBV_SEND_SIGNALED | IBV_SEND_INLINE;
-	wr.imm_data   = htonl(0x1234);
+	wr.send_flags = IBV_SEND_SIGNALED ; // | IBV_SEND_INLINE; //IBV_SEND_SIGNALED | IBV_SEND_INLINE;
+//	wr.imm_data   = (0x1234);
 
 	wr.wr.ud.ah = node->ah ;
 	wr.wr.ud.remote_qpn = node->remote_qpn;
 	wr.wr.ud.remote_qkey = node->remote_qkey;
 
 	sge.addr = (uint64_t)mr->addr;
-	sge.length = size;
+	sge.length = size; 
 	sge.lkey = mr->lkey;
 
 	debug("buffer pointer is %lx\n",sge.addr);
-//	debug("buffer pointer is %s\n",(char*)sge.addr);
+
 	if(!node->qp)
 		debug("I don't want \n");
 	

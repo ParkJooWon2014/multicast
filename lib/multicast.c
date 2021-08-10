@@ -104,8 +104,6 @@ int resolve_addr(struct ctrl *ctrl)
     struct rdma_addrinfo hints;
 	struct rdma_cm_event *event = NULL;
     
-// JOoWon
-	struct sockaddr_in sock;
 
 	memset(&hints, 0, sizeof(hints));
     hints.ai_port_space = RDMA_PS_UDP;
@@ -128,10 +126,7 @@ int resolve_addr(struct ctrl *ctrl)
     }
     if (ctrl->bind_addr)
     {
-		memcpy(&sock,bind_rai->ai_src_addr,sizeof(sock));
-		sock.sin_family = AF_INET;
-		sock.sin_port = htons(atoi(ctrl->server_port));
-        ret = rdma_bind_addr(id, (struct sockaddr*)&sock);//bind_rai->ai_src_addr);
+        ret = rdma_bind_addr(id, bind_rai->ai_src_addr);
         
 		if (ret)
         {
@@ -140,11 +135,8 @@ int resolve_addr(struct ctrl *ctrl)
         }
     }
 
-	memcpy(&sock,mcast_rai->ai_dst_addr,sizeof(sock));
-	sock.sin_family = AF_INET;
-	sock.sin_port = htons(atoi(ctrl->server_port));
     ret = rdma_resolve_addr(id, (bind_rai) ? bind_rai->ai_src_addr : NULL,
-                            (struct sockaddr *)&sock,//mcast_rai->ai_dst_addr, 
+                            mcast_rai->ai_dst_addr, 
 							2000);
     if (ret)
     {
@@ -159,7 +151,7 @@ int resolve_addr(struct ctrl *ctrl)
 
     
 	memcpy(&ctrl->mcast_sockaddr,
-           &sock,//mcast_rai->ai_dst_addr,
+           mcast_rai->ai_dst_addr,
            sizeof(struct sockaddr));
     
 	return 0;
@@ -330,12 +322,11 @@ int rdma_create_node(struct ctrl * ctrl)
 
 	ctrl->dev = alloc_device(ctrl);
 	ctrl->node = alloc_node(ctrl);
-	if(ctrl->type != CLIENT)
-		if(post_recv(ctrl->node))
-		{
-			debug("post_recv failed\n");
-			return 1 ;
-		}
+	if(post_recv(ctrl->node))
+	{
+		debug("post_recv failed\n");
+		return 1 ;
+	}
 	if(recv_event((void*)ctrl))
 	{
 		debug("cm_thread failed\n");

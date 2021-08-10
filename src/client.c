@@ -71,11 +71,12 @@ int main(int argc, char *argv[])
 	if(ctrl->type){
 		char buffer[100]  = "THIS IS SSLAB COMPUTER \n";
 		int count = 0 ;
+	//	int buffer =  12348123;
 		while(count < 100 ){
 			printf("+++++COUNT :%d+++++\n",count);
-//			debug("sending test MSG..... \n");
+			debug("sending test MSG..... \n");
 			post_send(ctrl->node,buffer,100);
-//			debug("MSG : %s\n",buffer);
+			debug("MSG : %s\n",buffer);
 			printf("\n");
 			count ++;
 		}

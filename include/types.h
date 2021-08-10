@@ -20,7 +20,7 @@
 #define bool short
 #define true 1
 #define false 0
-
+#define UDADDITION 40
 #define TEST_NZ(x) do {if ((x)) die("error :" #x "failed(return non-zero)." ); }while(0)
 #define TEST_Z(x) do {if (!(x)) die("error :" #x "failed(return zero/null)."); }while(0)
 #define dump_stat() printf("%d thread:  %s\n",gctrl->nr_node ,__func__)
@@ -32,6 +32,8 @@
 #define debug(msg, args...) do {\
     printf("DEBUG: "msg, ## args);\
 }while(0);
+
+
 enum node_type{
 	SERVER,
 	CLIENT,
