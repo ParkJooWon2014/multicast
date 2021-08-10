@@ -48,7 +48,7 @@ void*  __post_recv(void * _node)
 		ret = get_completion(node,RECV);
 		if(!ret){
 			debug("----recv memory----\n");
-			debug("%s\n",(char*)node->buffer + UDADDITION);
+			debug("%s",(char*)node->buffer + UDADDITION);
 			debug("-------------------\n");
 		}
 		ibv_ack_cq_events(node->rcv_cq, 1);
