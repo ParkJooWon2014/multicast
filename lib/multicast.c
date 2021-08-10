@@ -130,6 +130,8 @@ int resolve_addr(struct ctrl *ctrl)
 		server_addr.sin_addr.s_addr = inet_addr(ctrl->server_addr);
 	}
 
+
+
     if (ctrl->bind_addr)
     {
         ret = rdma_bind_addr(id, bind_rai->ai_src_addr);
@@ -140,6 +142,19 @@ int resolve_addr(struct ctrl *ctrl)
             return ret;
         }
     }
+	else{
+		struct sockaddr_in mine;
+		bzero(&mine,sizeof(mine));
+		mine.sin_family = AF_INET;
+		mine.sin_port = htons(50000);
+		
+        ret = rdma_bind_addr(id, (struct sockaddr*)&mine);
+		if (ret)
+        {
+            rdma_error("rdma_bind_addr\n");
+            return ret;
+		}
+	}
 	if(ctrl->type == CLIENT){
 		ret = rdma_resolve_addr(id, (bind_rai) ? bind_rai->ai_src_addr : NULL,
 				                (struct sockaddr*)&server_addr,
@@ -156,18 +171,6 @@ int resolve_addr(struct ctrl *ctrl)
 		{
 			return ret;
 	    }
-		
-		struct rdma_conn_param param = {
-			.qp_num = 0,
-			.flow_control = 1,
-			.responder_resources = 16,
-			.initiator_depth = 16,
-			.retry_count = 3,
-			.rnr_retry_count = 7,
-			.private_data = NULL,
-			.private_data_len = 0,
-		};
-		TEST_NZ(rdma_connect(ctrl->id,&param));
 
 	}
 	else {
@@ -345,8 +348,20 @@ struct node * alloc_node(struct ctrl * ctrl)
 		rdma_error("create_ah  is failed\n");
 		return NULL;
 	}
-	node->state = CONNECTED;
 
+	struct rdma_conn_param param = {
+			.qp_num = node->qp->qp_num,
+			.flow_control = 1,
+			.responder_resources = 16,
+			.initiator_depth = 16,
+			.retry_count = 3,
+			.rnr_retry_count = 7,
+			.private_data = NULL,
+			.private_data_len = 0,
+	};
+	TEST_NZ(rdma_connect(ctrl->id,&param));
+
+	node->state = CONNECTED;
 //	struct rdma_cm_event * no ;
 //	rdma_ack_cm_event(no);
 //	debug("AB new %s type event is received \n", rdma_event_str((event)->event));
