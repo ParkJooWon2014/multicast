@@ -57,6 +57,7 @@ struct node{
 	struct ibv_ah * ah ;
 	//socket addr; 
 	bool mc_join;
+
 	bool type;
 	enum{
 		INIT,
@@ -86,6 +87,7 @@ struct ctrl{
 	char *bind_addr;
     char *mcast_addr;
     char *server_port;
+	char *server_addr;
 	//struct rdma_addrinfo *dest_addr;
     //struct rdma_addrinfo *mcast_addr;
 

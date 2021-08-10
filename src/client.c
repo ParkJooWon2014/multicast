@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     ctrl->server_port = DEFAULT_PORT;
 	ctrl->type =SERVER;
     
-	while ((op = getopt(argc, argv, "chb:m:p:")) != -1)
+	while ((op = getopt(argc, argv, "chb:m:p:d:")) != -1)
     {
         switch (op)
         {
@@ -43,12 +43,16 @@ int main(int argc, char *argv[])
         case 'p':
             ctrl->server_port = optarg;
             break;
-        default:
+		case 'd':
+			ctrl->server_addr  = optarg;
+			break;
+		default:
             printf("usage: %s -m mc_address\n", argv[0]);
             printf("\t[-c client mode]\n");
             printf("\t[-b bind_address]\n");
             printf("\t[-p port_number]\n");
-            exit(1);
+            printf("\t[-d server_address]\n");
+			exit(1);
         }
     }
 
@@ -57,6 +61,13 @@ int main(int argc, char *argv[])
         printf("multicast address must be specified with -m\n");
         exit(1);
     }
+    
+	if (ctrl->type  && ctrl->server_addr == NULL)
+    {
+        printf("server address must be specified with -d\n");
+        exit(1);
+    }
+	
 	ret = resolve_addr(ctrl);
 	if(ret){
 		debug("Can't resolve addr \n");
@@ -80,6 +91,7 @@ int main(int argc, char *argv[])
 			printf("\n");
 			count ++;
 		}
+		sleep(100);
 	}
 
 	else {
