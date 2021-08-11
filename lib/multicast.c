@@ -130,8 +130,6 @@ int resolve_addr(struct ctrl *ctrl)
 		server_addr.sin_addr.s_addr = inet_addr(ctrl->server_addr);
 	}
 
-
-
     if (ctrl->bind_addr)
     {
         ret = rdma_bind_addr(id, bind_rai->ai_src_addr);
@@ -141,6 +139,7 @@ int resolve_addr(struct ctrl *ctrl)
             rdma_error("rdma_bind_addr\n");
             return ret;
         }
+		debug("rdma bind addr is Success\n");
     }
 	else{
 		struct sockaddr_in mine;
@@ -154,6 +153,7 @@ int resolve_addr(struct ctrl *ctrl)
             rdma_error("rdma_bind_addr\n");
             return ret;
 		}
+		debug("rdma bind addr is Success\n");
 	}
 	if(ctrl->type == CLIENT){
 		ret = rdma_resolve_addr(id, (bind_rai) ? bind_rai->ai_src_addr : NULL,
@@ -177,16 +177,18 @@ int resolve_addr(struct ctrl *ctrl)
 
 		struct rdma_cm_event *event = NULL;
 
+		TEST_NZ(rdma_accept(ctrl->id, &event->param.conn));
+        
         ret = rdma_get_cm_event(ctrl->ec, &event);
         if (ret)
         {
             debug("rdma_get_cm_event\n");
             return 1 ;
 		}
-		TEST_NZ(rdma_accept(ctrl->id, &event->param.conn));
-        printf("event %s, status %d\n",
+		printf("event %s, status %d\n",
                rdma_event_str(event->event), event->status);
-        rdma_ack_cm_event(event);
+        
+		rdma_ack_cm_event(event);
 
 	}
 	memcpy(&ctrl->mcast_sockaddr,
@@ -359,7 +361,8 @@ struct node * alloc_node(struct ctrl * ctrl)
 			.private_data = NULL,
 			.private_data_len = 0,
 	};
-	TEST_NZ(rdma_connect(ctrl->id,&param));
+
+	TEST_NZ(rdma_connect(node->id,&param));
 
 	node->state = CONNECTED;
 //	struct rdma_cm_event * no ;
