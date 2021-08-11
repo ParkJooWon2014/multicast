@@ -186,17 +186,24 @@ int resolve_addr(struct ctrl *ctrl)
 		}
 	}
 	else {
-		struct rdma_cm_event *event = NULL;
-        
-        ret = rdma_get_cm_event(ctrl->ec, &event);
 		
-		TEST_NZ(rdma_accept(ctrl->id, &event->param.conn));
-        
+		struct rdma_conn_param cm_params = {};
+		struct rdma_cm_event *event = NULL;
+
+        ret = rdma_get_cm_event(ctrl->ec, &event);
 		if (ret)
         {
             debug("rdma_get_cm_event\n");
             return 1 ;
 		}
+
+		cm_params.initiator_depth = event->param.conn.initiator_depth;
+		cm_params.responder_resources = event->param.conn.responder_resources;
+		cm_params.rnr_retry_count = event->param.conn.rnr_retry_count;
+		cm_params.flow_control = event->param.conn.flow_control;
+		
+		TEST_NZ(rdma_accept(ctrl->id, &cm_params));
+        
 		printf("event %s, status %d\n",
                rdma_event_str(event->event), event->status);
         
