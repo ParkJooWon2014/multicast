@@ -172,15 +172,27 @@ int resolve_addr(struct ctrl *ctrl)
 			return ret;
 	    }
 
+		TEST_NZ(rdma_resolve_route(id, 2000));
+	
+		debug("waiting for cm event: RDMA_CM_EVENT_ROUTE_RESOLVED\n");
+	
+		ret = process_rdma_cm_event(ec, 
+				RDMA_CM_EVENT_ROUTE_RESOLVED,
+				&event);
+	
+		if (ret) {
+			rdma_error("Failed to receive a valid event, ret = %d \n", ret);
+			return ret;
+		}
 	}
 	else {
-
 		struct rdma_cm_event *event = NULL;
-
-		TEST_NZ(rdma_accept(ctrl->id, &event->param.conn));
         
         ret = rdma_get_cm_event(ctrl->ec, &event);
-        if (ret)
+		
+		TEST_NZ(rdma_accept(ctrl->id, &event->param.conn));
+        
+		if (ret)
         {
             debug("rdma_get_cm_event\n");
             return 1 ;
